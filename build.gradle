@@ -1,0 +1,21 @@
+plugins {
+    id 'java'
+}
+
+group 'cz.cuni.mff.semestral'
+version '1.0 (alpha)'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'com.google.code.gson:gson:2.8.9'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.2'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.2'
+    implementation 'net.dv8tion:JDA:5.0.0-alpha.2'
+}
+
+test {
+    useJUnitPlatform()
+}
