@@ -1,6 +1,6 @@
 package cz.cuni.mff.semestral;
 
-import cz.cuni.mff.semestral.apiconn.BinanceConnection;
+import cz.cuni.mff.semestral.api.BinanceConnection;
 import cz.cuni.mff.semestral.parse.Parser;
 
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;

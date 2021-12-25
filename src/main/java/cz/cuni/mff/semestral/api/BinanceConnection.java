@@ -10,6 +10,7 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.HashMap;
+import java.util.Map;
 
 public class BinanceConnection {
     final String binance = "https://api.binance.com";
@@ -17,17 +18,13 @@ public class BinanceConnection {
     final String method = "GET";
     final int delay = 5000;
     final int okCode = 200;
-    private HashMap<String, Double> cryptocurrencyPairs;
-
-    public BinanceConnection() {
-        cryptocurrencyPairs = new HashMap<>();
-    }
 
     private String trimQuotes(String token) {
         return token.substring(1, token.length() - 1);
     }
 
-    private void jsonParse(String responseBody) {
+    public HashMap<String, Double> jsonParse(String responseBody) {
+        HashMap<String, Double> cryptocurrencyPairs = new HashMap<>();
         JsonArray jsonArr = JsonParser.parseString(responseBody).getAsJsonArray();
         for (JsonElement elem: jsonArr) {
             String pair = elem.getAsJsonObject().get("symbol").toString();
@@ -42,9 +39,14 @@ public class BinanceConnection {
                 System.err.println("issue");
             }
         }
+        for (Map.Entry<String, Double> val:
+                cryptocurrencyPairs.entrySet()) {
+            System.out.println(val.getKey() + ": " + val.getValue());
+        }
+        return cryptocurrencyPairs;
     }
 
-    public void connect() throws IOException {
+    public String connect() throws IOException {
         URL url = new URL(binance + dir);
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
         connection.setRequestMethod(method);
@@ -62,7 +64,8 @@ public class BinanceConnection {
                 sBuilder.append(line);
             }
             reader.close();
-            jsonParse(sBuilder.toString());
+            return sBuilder.toString();
         }
+        return null;
     }
 }
