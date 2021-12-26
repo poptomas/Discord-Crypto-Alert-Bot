@@ -2,6 +2,7 @@ package cz.cuni.mff.semestral.api;
 
 import cz.cuni.mff.semestral.parse.Parser;
 
+import cz.cuni.mff.semestral.utilities.Stopwatch;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 
@@ -10,6 +11,7 @@ import java.util.HashMap;
 import java.util.concurrent.TimeUnit;
 
 public class Communication extends ListenerAdapter {
+
     enum Actions{ Help, Alert, Predict};
     private final Parser parser;
     private final BinanceConnection binance;
@@ -28,17 +30,25 @@ public class Communication extends ListenerAdapter {
         binance = new BinanceConnection();
     }
 
-    public void establishConnection() {
-        int delay = 10;
+    public synchronized void establishConnection() {
+        int delay = 5;
         while(true) {
             try {
                 String rawResponse = binance.connect();
                 HashMap<String, Double> json = binance.jsonParse(rawResponse);
+
+                System.out.println("Get");
+
+                Stopwatch sw = new Stopwatch();
+                sw.start();
                 parser.getCurrentData(json);
-                System.out.println(":)");
+                parser.checkAlerts();
+                sw.end();
+                sw.printMessage();
                 TimeUnit.SECONDS.sleep(delay);
                 System.out.println("Done");
-            } catch (IOException | InterruptedException ex) {
+
+            } catch (IOException | InterruptedException ex){
                 System.err.println("Can't connect right now");
                 break;
             }

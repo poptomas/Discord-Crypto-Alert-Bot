@@ -39,10 +39,11 @@ public class BinanceConnection {
                 System.err.println("issue");
             }
         }
+        /*
         for (Map.Entry<String, Double> val:
                 cryptocurrencyPairs.entrySet()) {
             System.out.println(val.getKey() + ": " + val.getValue());
-        }
+        }*/
         return cryptocurrencyPairs;
     }
 

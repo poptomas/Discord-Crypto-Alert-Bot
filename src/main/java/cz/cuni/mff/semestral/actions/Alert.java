@@ -1,10 +1,14 @@
 package cz.cuni.mff.semestral.actions;
 
+
+import cz.cuni.mff.semestral.utilities.Pair;
+
 public class Alert {
-    String pair;
-    Double value;
-    String direction;
-    boolean perc;
+    private String pair;
+    private Double value;
+    private Double priceAtTime;
+    private boolean upDirection;
+    private boolean isPercent = false;
 
     public Alert setPair(String pair) {
         this.pair = pair;
@@ -16,13 +20,34 @@ public class Alert {
         return this;
     }
 
-    public Alert setIsPerc(boolean perc) {
-        this.perc = perc;
+    public Alert setIsPerc(boolean isPercent) {
+        this.isPercent = isPercent;
         return this;
     }
 
-    public Alert setDirection(String direction) {
-        this.direction = direction;
+    public Alert setDirection(boolean upDirection) {
+        this.upDirection = upDirection;
         return this;
+    }
+
+    public Alert setPriceAtTime(Double priceAtTime) {
+        this.priceAtTime = priceAtTime;
+        return this;
+    }
+
+    public Pair<Double, Boolean> getValue() {
+        return new Pair<>(value, isPercent);
+    }
+
+    public boolean getDirection() {
+        return upDirection;
+    }
+
+    public String getCryptocurrencyPair() {
+        return pair;
+    }
+
+    public double getPriceAtTime() {
+        return priceAtTime;
     }
 }

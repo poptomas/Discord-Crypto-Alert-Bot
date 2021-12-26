@@ -3,9 +3,8 @@ package cz.cuni.mff.semestral.parse;
 import cz.cuni.mff.semestral.actions.Alert;
 import cz.cuni.mff.semestral.options.Option;
 import cz.cuni.mff.semestral.options.Options;
-import org.jetbrains.annotations.Nullable;
+import cz.cuni.mff.semestral.utilities.Pair;
 
-import java.lang.reflect.Array;
 import java.text.MessageFormat;
 import java.util.*;
 
@@ -48,21 +47,6 @@ public class Parser {
         activityMap.put(Actions.ADD, "add");
     }
 
-    private static class Pair<T, U> {
-        public T first;
-        public U second;
-
-        public Pair(T first, U second) {
-            this.first = first;
-            this.second = second;
-        }
-
-        public Pair() {
-            this.first = null;
-            this.second = null;
-        }
-    }
-
     private Pair<String, String> splitToKVPair(String argument) {
         Pair<String, String> pair = new Pair<>();
         pair.first = argument.substring(0, argument.indexOf("="));
@@ -74,12 +58,48 @@ public class Parser {
         cryptoPairs = pairs;
     }
 
+    private double calcPercent(double priceAtTime, double percent, boolean upDirection) {
+        double projected = percent / 100 * priceAtTime;
+        if(upDirection) {
+            return priceAtTime + projected;
+        }
+        else {
+            return priceAtTime - projected;
+        }
+    }
+
+    private boolean isTriggered(Alert alert) {
+        String pair = alert.getCryptocurrencyPair();
+        double priceAtTime = alert.getPriceAtTime();
+        double currentPrice = cryptoPairs.get(pair);
+        Pair<Double, Boolean> projected = alert.getValue();
+        boolean upDirection = alert.getDirection();
+
+        if(projected.second) {
+            projected.first = calcPercent(priceAtTime, projected.first, upDirection);
+        }
+        double alertValue = projected.first;
+        System.out.println(upDirection);
+        System.out.println(!upDirection);
+        System.out.println(alertValue > currentPrice);
+        System.out.println(alertValue < currentPrice);
+        return ((upDirection && alertValue > currentPrice) || (!upDirection && alertValue < currentPrice));
+    }
+
+    public void checkAlerts() {
+        currentAlerts.removeIf(this::isTriggered);
+    }
+
     private boolean isEmpty(ArrayList<String> list) {
         return list.size() == 0;
     }
 
     private String trimFirstChar(String token) {
         return token.substring(1);
+    }
+
+    private String trimLastChar(String token) {
+        return token.substring(0, token.length() - 1);
     }
 
     private String getOptWithNames() {
@@ -121,21 +141,71 @@ public class Parser {
             return unknownCryptoPair(pair);
         }
         String strValue = simplifiedInput.get(1);
-        String direction = simplifiedInput.get(2);
+        String inDirection = simplifiedInput.get(2);
+        boolean direction = inDirection.equalsIgnoreCase("UP");
+        System.out.println(Objects.equals(inDirection, "UP"));
         boolean isPercent = false;
         double value = 0;
         if(strValue.endsWith("%")) {
+            strValue = trimLastChar(strValue);
             value = Double.parseDouble(strValue);
             isPercent = true;
         }
         Alert alert = new Alert();
-        alert.setPair(pair).setDirection(direction).setValue(value).setIsPerc(isPercent);
-        sb.append(successfullyCreated());
+        alert.setPair(pair)
+                .setDirection(direction)
+                .setValue(value).setIsPerc(isPercent)
+                .setPriceAtTime(cryptoPairs.get(pair));
+        Optional<Alert> hasDuplicate = currentAlerts.stream()
+                .filter(member -> pair.equals(member.getCryptocurrencyPair()))
+                .findAny();
+        if(hasDuplicate.isPresent()){
+            sb.append(alreadyInTheList(pair));
+        }
+        else {
+            currentAlerts.add(alert);
+            sb.append(successfullyCreated());
+        }
         return sb.toString();
     }
 
+    private String withPrecision(double value) {
+        return String.format("%.2f", value);
+    }
+
     private String alertOptWithNames() {
-        return "NYI";
+        StringBuilder sb = new StringBuilder();
+        System.out.println(currentAlerts.size());
+        for (Alert alert: currentAlerts) {
+            boolean upDirection = alert.getDirection();
+            String pair = alert.getCryptocurrencyPair();
+            double priceAtTime = alert.getPriceAtTime();
+            Pair<Double, Boolean> value = alert.getValue();
+            double projectedValue;
+            if(value.second) {
+                projectedValue = calcPercent(priceAtTime, value.first, upDirection);
+            }
+            else {
+                projectedValue = value.first;
+            }
+            sb.append(pair)
+                    .append(" current price: ").append(withPrecision(cryptoPairs.get(pair)))
+                    .append(", alert at: ");
+            if(value.second) {
+                sb.append(projectedValue)
+                        .append(" (").append(upDirection ? "+" : "-")
+                        .append(withPrecision(value.first))
+                        .append(" %)");
+            }
+            else{
+                sb.append(projectedValue);
+            }
+            sb.append("\n");
+        }
+        if(sb.isEmpty()) {
+            sb.append(emptyList());
+        }
+        return sb.toString();
     }
 
     public String processInput() {
