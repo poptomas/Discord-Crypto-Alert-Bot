@@ -1,6 +1,5 @@
 package cz.cuni.mff.semestral;
 
-import cz.cuni.mff.semestral.api.BinanceConnection;
 import cz.cuni.mff.semestral.api.Communication;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
@@ -13,6 +12,6 @@ public class Entrypoint {
         JDA jda = JDABuilder.createDefault(token).build();
         Communication comm = new Communication();
         jda.addEventListener(comm);
-        comm.establishConnection();
+        comm.establishConnection(jda);
     }
 }

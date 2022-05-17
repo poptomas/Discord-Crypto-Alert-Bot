@@ -3,6 +3,7 @@ package cz.cuni.mff.semestral.api;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
+import cz.cuni.mff.semestral.utilities.Utilities;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -10,7 +11,6 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.HashMap;
-import java.util.Map;
 
 public class BinanceConnection {
     final String binance = "https://api.binance.com";
@@ -19,26 +19,23 @@ public class BinanceConnection {
     final int delay = 5000;
     final int okCode = 200;
 
-    private String trimQuotes(String token) {
-        return token.substring(1, token.length() - 1);
-    }
-
     public HashMap<String, Double> jsonParse(String responseBody) {
         HashMap<String, Double> cryptocurrencyPairs = new HashMap<>();
         JsonArray jsonArr = JsonParser.parseString(responseBody).getAsJsonArray();
         for (JsonElement elem: jsonArr) {
             String pair = elem.getAsJsonObject().get("symbol").toString();
-            String pairTrim = trimQuotes(pair); // "ETHUSDT" by default
+            String pairTrim = Utilities.TrimQuotes(pair); // "ETHUSDT" symbol by default
             String price = elem.getAsJsonObject().get("price").toString();
-            String priceTrim = trimQuotes(price);
+            String priceTrim = Utilities.TrimQuotes(price);
             try {
                 double convertedPrice = Double.parseDouble(priceTrim);
                 cryptocurrencyPairs.put(pairTrim, convertedPrice);
             }
             catch(Exception ex) {
-                System.err.println("issue");
+                Utilities.Print("Convertibility issue");
             }
         }
+
         /*
         for (Map.Entry<String, Double> val:
                 cryptocurrencyPairs.entrySet()) {
@@ -53,19 +50,20 @@ public class BinanceConnection {
         connection.setRequestMethod(method);
         connection.setConnectTimeout(delay);
         if(connection.getResponseCode() == okCode){
-            InputStreamReader iStreamReader = new InputStreamReader(connection.getInputStream());
-            BufferedReader reader = new BufferedReader(iStreamReader);
-            String line;
-            StringBuilder sBuilder = new StringBuilder();
-            while(true) {
-                line = reader.readLine();
-                if(line == null) {
-                    break;
+            StringBuilder stringBuilder = new StringBuilder();
+            try(InputStreamReader iStreamReader = new InputStreamReader(connection.getInputStream());
+                BufferedReader reader = new BufferedReader(iStreamReader)
+            ) {
+                String line;
+                while(true) {
+                    line = reader.readLine();
+                    if (line == null) {
+                        break;
+                    }
+                    stringBuilder.append(line);
                 }
-                sBuilder.append(line);
             }
-            reader.close();
-            return sBuilder.toString();
+            return stringBuilder.toString();
         }
         return null;
     }

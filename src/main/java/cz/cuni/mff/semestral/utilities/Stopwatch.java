@@ -15,7 +15,9 @@ public class Stopwatch {
     }
 
     public void printMessage() {
-        String message = MessageFormat.format("Elapsed {0} ms", endRec / conversion);
+        String message = MessageFormat.format(
+                "Elapsed {0} ms", endRec / conversion
+        );
         System.out.println(message);
     }
 }

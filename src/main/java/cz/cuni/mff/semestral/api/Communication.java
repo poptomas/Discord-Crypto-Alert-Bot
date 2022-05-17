@@ -1,58 +1,68 @@
 package cz.cuni.mff.semestral.api;
 
-import cz.cuni.mff.semestral.parse.Parser;
-
+import cz.cuni.mff.semestral.processor.Processor;
 import cz.cuni.mff.semestral.utilities.Stopwatch;
+import cz.cuni.mff.semestral.utilities.Utilities;
+import net.dv8tion.jda.api.JDA;
+import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 public class Communication extends ListenerAdapter {
-
-    enum Actions{ Help, Alert, Predict};
-    private final Parser parser;
+    String startSign = "!";
+    private final Processor processor;
     private final BinanceConnection binance;
 
-    private boolean isEmpty(String[] args) {
-        return args.length == 0;
-    }
-
     private boolean isBot(MessageReceivedEvent event) {
-        //do not let (possible even other) bot respond to bot messages (it may trigger spamming)
+        //do not let (possible even other) bot respond to bot messages
+        // which may trigger spamming
         return event.getAuthor().isBot();
     }
 
     public Communication() {
-        parser = new Parser();
+        processor = new Processor();
         binance = new BinanceConnection();
     }
 
-    public synchronized void establishConnection() {
-        int delay = 5;
+    public synchronized void establishConnection(JDA jda) {
+        int delay = 1; // seconds
         while(true) {
             try {
                 String rawResponse = binance.connect();
                 HashMap<String, Double> json = binance.jsonParse(rawResponse);
 
-                System.out.println("Get");
-
-                Stopwatch sw = new Stopwatch();
-                sw.start();
-                parser.getCurrentData(json);
-                parser.checkAlerts();
-                sw.end();
-                sw.printMessage();
+                //Stopwatch sw = new Stopwatch();
+                //sw.start();
+                processor.SetCurrentData(json);
+                var alertInfo = processor.ClearDoneAlerts();
+                if(!alertInfo.isEmpty()) {
+                    Utilities.Print(alertInfo);
+                    List<TextChannel> channels = jda.getTextChannelsByName(
+                            "general", true
+                    );
+                    for(var channel : channels) {
+                        sendMessage(channel, alertInfo);
+                    }
+                }
+                //sw.end();
+                //sw.printMessage();
                 TimeUnit.SECONDS.sleep(delay);
-                System.out.println("Done");
+                //System.out.println("Done");
 
             } catch (IOException | InterruptedException ex){
                 System.err.println("Can't connect right now");
                 break;
             }
         }
+    }
+
+    private void sendMessage(TextChannel channel, String content) {
+        channel.sendMessage(content).queue();
     }
 
     private void sendMessage(MessageReceivedEvent event, String content) {
@@ -62,14 +72,12 @@ public class Communication extends ListenerAdapter {
     public void onMessageReceived(MessageReceivedEvent event) {
         System.out.println("Message received");
         String[] args = event.getMessage().getContentRaw().split(" ");
-        String startSign = "?";
-        if(isBot(event) || isEmpty(args)) {
+        if(isBot(event) || Utilities.IsEmpty(args)) {
             return;
         }
-        String output = parser.parse(args);
-        if (output.startsWith(startSign)) {
-            output = parser.processInput();
+        String parserOutput = processor.ProcessInput(args);
+        if(!parserOutput.isEmpty()) {
+            sendMessage(event, parserOutput);
         }
-        sendMessage(event, output);
     }
 }
