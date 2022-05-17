@@ -1,10 +1,10 @@
 package cz.cuni.mff.semestral.processor;
 
 import cz.cuni.mff.semestral.actions.Alert;
-import cz.cuni.mff.semestral.utilities.*;
-import jdk.jshell.execution.Util;
+import cz.cuni.mff.semestral.utilities.Pair;
+import cz.cuni.mff.semestral.utilities.Utilities;
+import cz.cuni.mff.semestral.processor.User;
 
-import java.lang.reflect.Array;
 import java.text.MessageFormat;
 import java.util.*;
 import java.util.function.Function;
@@ -23,36 +23,43 @@ public class Processor {
         FULLCLEAR, LISTCLEAR, ALERTSCLEAR,
         HELP
     }
-
-    private ArrayList<String> simplifiedInput;
-
+    private ArrayList<String> parseInput;
     // active storages
-    private HashMap<String, Double> cryptoPairs;
-    private ArrayList<String> localWatchList;
-    private ArrayList<Alert> currentAlerts;
+    private HashMap<String, Double> cryptocurrencyPairs;
+    private HashMap<String, User> userMap;
+    private User user;
 
-    // input parsing helpers
-    private EnumMap<Actions, Command> enumMapper;
-    private EnumMap<Actions, Supplier<String>> simpleFuncMapper;
-    private EnumMap<Actions, Function<String, String>> paramFuncMapper;
+    // parse helper mappers
+    private final EnumMap<Actions, Command> enumMapper;
+    private final EnumMap<Actions, Supplier<String>> simpleFuncMapper;
+    private final EnumMap<Actions, Function<String, String>> paramFuncMapper;
+    // parser
+    private final SimpleParser simple;
+
     //private EnumMap<Actions, ThreeParameterFunction<Processor, String, String>> multiFuncMapper;
     // in case, there were multiple three param functions
 
     public Processor() {
-        simplifiedInput = new ArrayList<>();
-        localWatchList = new ArrayList<>();
-        currentAlerts = new ArrayList<>();
+        parseInput = new ArrayList<>();
         enumMapper = new EnumMap<>(Actions.class);
         simpleFuncMapper = new EnumMap<>(Actions.class);
         paramFuncMapper = new EnumMap<>(Actions.class);
+        simple = new SimpleParser();
+        userMap = new HashMap<>();
         FillEnumMaps();
     }
 
+    /**
+     * Set available options and their mapping
+     * to particular functions
+     * - with the primary effort to keep the variables
+     * on a single place
+     */
     private void FillEnumMaps() {
         enumMapper.put(
                 Actions.ADD,
                 new Command(
-                        MessageFormat.format("{0}add <symbol>", triggerSign),
+                        MessageFormat.format("{0}add [symbol]", triggerSign),
                         "adds a new cryptocurrency to your watchlist"
                 )
         );
@@ -60,7 +67,7 @@ public class Processor {
         enumMapper.put(
                 Actions.ALERT,
                 new Command(
-                        MessageFormat.format("{0}alert <symbol> <value>", triggerSign),
+                        MessageFormat.format("{0}alert [symbol] [value]", triggerSign),
                         "creates a new alert, i. e., !alert BTCUSDT -5% or !alert BTCUST 31000"
                 )
         );
@@ -68,14 +75,14 @@ public class Processor {
         enumMapper.put(
                 Actions.RMLIST,
                 new Command(
-                        MessageFormat.format("{0}rml <symbol>", triggerSign),
+                        MessageFormat.format("{0}rml [symbol]", triggerSign),
                         "removes the symbol from your current watchlist"
                 )
         );
 
         enumMapper.put(
                 Actions.RMALERT,
-                new Command(MessageFormat.format("{0}rma <symbol>", triggerSign),
+                new Command(MessageFormat.format("{0}rma [symbol]", triggerSign),
                         "removes the symbol your current alerts"
                 )
         );
@@ -128,33 +135,72 @@ public class Processor {
         simpleFuncMapper.put(Actions.CURRENT, this::GetCurrentAlerts);
         simpleFuncMapper.put(Actions.LIST, this::GetCurrentList);
 
-        paramFuncMapper.put(Actions.ADD, this::AddToList);
-        paramFuncMapper.put(Actions.RMLIST, this::RemoveFromList);
+        paramFuncMapper.put(Actions.ADD, this::AddToWatchlist);
+        paramFuncMapper.put(Actions.RMLIST, this::RemoveFromWatchlist);
         paramFuncMapper.put(Actions.RMALERT, this::RemoveFromAlerts);
     }
 
-    public void SetCurrentData(HashMap<String, Double> pairs) {
-        cryptoPairs = pairs;
+    private String ProcessCommand(String command, String[] args, int index, String user) {
+        ArrayList<String> arguments = new ArrayList<>();
+        arguments.add(command);
+        int finalIdx = index + 1;
+        for(; finalIdx < args.length; ++finalIdx) {
+            String arg = args[finalIdx];
+            if(arg.startsWith(triggerSign)) {
+                break;
+            }
+            arguments.add(arg);
+        }
+        parseInput = arguments;
+        return simple.ProcessCommand(user);
     }
 
-    public EnumMap<Actions, Command> GetEnumMapper() {
-        return enumMapper;
+    /**
+     *
+     * @return Part of the user input (parsed input command)
+     * i.e., !add BTCUSDT !rml BTCUSDT returns !add BTCUSDT in the second call !rml BTCUSDT is removed
+     */
+    public String GetPartialUserInput() {
+        ArrayList<String> temporary = parseInput;
+        parseInput = new ArrayList<>();
+        return String.join(" ", temporary);
     }
 
-    public String ClearDoneAlerts() {
+    public HashMap<String, User> GetUserMap() {
+        return userMap;
+    }
+
+    public String ProcessInput(String[] args, int index, String user) {
+        String command = args[index];
+        String helpKeyword = enumMapper.get(Actions.HELP).GetName();
+        if (command.equals(helpKeyword)) {
+            Arrays.fill(args, null);
+            return GetHelp();
+        }
+        else if (command.startsWith(triggerSign)) {
+            return ProcessCommand(command, args, index, user);
+        }
+        else {
+            return "";
+        }
+    }
+
+    public String ClearFinishedAlerts(User calledUser) {
+        var usersAlerts = calledUser.GetAlerts();
         StringBuilder sb = new StringBuilder();
-        List<Alert> elementsToBeRemoved = currentAlerts.stream()
-                .filter(this::isTriggered)
+        List<Alert> elementsToBeRemoved = usersAlerts.stream()
+                .filter(this::IsTriggered)
                 .collect(Collectors.toList());
         if (!elementsToBeRemoved.isEmpty()) {
-            currentAlerts.removeAll(elementsToBeRemoved);
+            user.RemoveMultipleAlerts(elementsToBeRemoved);
             for (Alert alert : elementsToBeRemoved) {
-                var name = alert.GetCryptocurrencyPair();
+                var name = alert.GetCryptocurrencySymbol();
                 var projected = alert.GetValue();
                 double triggerValue = projected.first;
-                sb.append("[TRIGGER]: ").append(name);
+                // TODO MOVE ABSTRACTION TO ERRORMESSAGE
+                sb.append(name);
                 if (projected.second) {
-                    triggerValue = Utilities.CalcPercent(alert.GetPriceAtTime(), projected.first);
+                    triggerValue = Utilities.CalcValueFromPercent(alert.GetPriceAtTime(), projected.first);
                     sb.append(MessageFormat.format("({0}%)", projected.first));
                 }
                 sb.append(MessageFormat.format(
@@ -165,14 +211,18 @@ public class Processor {
         return sb.toString();
     }
 
-    private boolean isTriggered(Alert alert) {
-        String pair = alert.GetCryptocurrencyPair();
-        double currentPrice = cryptoPairs.get(pair);
+    public void SetCurrentData(HashMap<String, Double> pairs) {
+        cryptocurrencyPairs = pairs;
+    }
+
+    private boolean IsTriggered(Alert alert) {
+        String alertSymbol = alert.GetCryptocurrencySymbol();
+        double currentPrice = cryptocurrencyPairs.get(alertSymbol);
         double priceAtTime = alert.GetPriceAtTime();
         Pair<Double, Boolean> projected = alert.GetValue();
         double triggerThreshold = projected.first;
         if (projected.second) { // percentage
-            triggerThreshold = Utilities.CalcPercent(priceAtTime, projected.first);
+            triggerThreshold = Utilities.CalcValueFromPercent(priceAtTime, triggerThreshold);
         }
         return (
                 (priceAtTime < triggerThreshold
@@ -183,6 +233,7 @@ public class Processor {
     }
 
     private String GetHelp() {
+        parseInput.add(enumMapper.get(Actions.HELP).GetName());
         StringBuilder sb = new StringBuilder();
         sb.append("For cryptocurrency pairs, take a look at https://coinmarketcap.com/exchanges/binance\n");
         sb.append("Currently supported commands: \n");
@@ -194,96 +245,108 @@ public class Processor {
     }
 
     private String GetCurrentAlerts() {
-        if (currentAlerts.isEmpty()) {
+        var usersAlerts = user.GetAlerts();
+        if (usersAlerts.isEmpty()) {
             var command = enumMapper.get(Actions.ALERT);
-            return ErrorMessage.EmptyAlerts(command);
+            return Messenger.EmptyAlerts(command);
         }
         StringBuilder sb = new StringBuilder();
-        for (Alert alert : currentAlerts) {
+        for (Alert alert : usersAlerts) {
             Pair<Double, Boolean> value = alert.GetValue();
-            String name = alert.GetCryptocurrencyPair();
-            sb.append(name);
+            String name = alert.GetCryptocurrencySymbol();
             double triggerValue;
-            if (value.second) { // is percentage
+            boolean isPercent = value.second;
+            if (isPercent) { // is percentage
                 var percentage = value.first;
                 double originalPrice = alert.GetPriceAtTime();
-                triggerValue = Utilities.CalcPercent(originalPrice, percentage);
-                sb.append(
-                        MessageFormat.format(
-                                " (threshold {0} %)", percentage)
-                );
-            } else {
+                triggerValue = Utilities.CalcValueFromPercent(originalPrice, percentage);
+            }
+            else {
                 triggerValue = value.first;
             }
             sb.append(
-                    MessageFormat.format(
-                            ": alert triggers at {0} USD (current: {1} USD)\n",
-                            triggerValue, cryptoPairs.get(name))
+                    Messenger.GetTriggerValue(name, triggerValue, cryptocurrencyPairs.get(name))
             );
         }
         return sb.toString();
     }
 
-    private String RemoveFromAlerts(String pair) {
-        pair = Utilities.Normalize(pair);
+    private String RemoveFromAlerts(String symbol) {
+        var usersAlerts = user.GetAlerts();
+        symbol = Utilities.Normalize(symbol);
+        String storage = "alerts";
         StringBuilder sb = new StringBuilder();
         boolean wasFound = false;
-        for(var alert : currentAlerts) {
-            if(pair.equals(alert.GetCryptocurrencyPair())) {
-                currentAlerts.remove(alert);
-                sb.append(ErrorMessage.SuccessfullyRemoved(pair));
+        for(var alert : usersAlerts) {
+            String alertSymbol = alert.GetCryptocurrencySymbol();
+            if(symbol.equals(alertSymbol)) {
+                user.RemoveFromAlerts(alert);
+                sb.append(Messenger.SuccessfullyRemoved(symbol, storage));
                 wasFound = true;
-                break;
             }
         }
         if(!wasFound) {
-            sb.append(ErrorMessage.NotFound(pair));
+            sb.append(Messenger.NotFound(symbol));
         }
         return sb.toString();
     }
 
-    private String RemoveFromList(String pair) {
-        pair = Utilities.Normalize(pair);
-
-        Utilities.Print(pair);
-
-        Utilities.Print(localWatchList.size());
-
-        StringBuilder sb = new StringBuilder();
-        boolean wasFound = false;
-        for(String symbol : localWatchList) {
-            Utilities.Print(symbol);
-            if(pair.equals(symbol)) {
-                localWatchList.remove(symbol);
-                sb.append(ErrorMessage.SuccessfullyRemoved(pair));
-                wasFound = true;
-                break;
-            }
+    private String RemoveFromWatchlist(String symbol) {
+        var usersWatchlist = user.GetWatchlist();
+        symbol = Utilities.Normalize(symbol);
+        String storage = "watchlist";
+        if(usersWatchlist.contains(symbol)) {
+            user.RemoveFromWatchlist(symbol);
+            return Messenger.SuccessfullyRemoved(symbol, storage);
         }
-        if(!wasFound) {
-            sb.append(ErrorMessage.NotFound(pair));
+        else {
+            return Messenger.NotFound(symbol);
         }
-        return sb.toString();
     }
 
-    private String AddToList(String pair) {
-        int maxAllowed = 10; // way too large messages
-        StringBuilder sb = new StringBuilder();
-        pair = Utilities.Normalize(pair);
-        if (!cryptoPairs.containsKey(pair)) {
-            sb.append(ErrorMessage.UnknownCryptoPair(pair));
-        } else if (localWatchList.contains(pair)) {
-            sb.append(ErrorMessage.AlreadyInTheList(pair));
-        } else if (localWatchList.size() > maxAllowed) {
-            sb.append(ErrorMessage.MaximumExceeded(maxAllowed));
-        } else {
-            localWatchList.add(pair);
-            sb.append(ErrorMessage.SuccessfullyAdded(pair));
+    private String AddToWatchlist(String symbol) {
+        int maxWatchListAllowed = 50;
+        var userList = user.GetWatchlist();
+        symbol = Utilities.Normalize(symbol);
+        if (!cryptocurrencyPairs.containsKey(symbol)) {
+            return Messenger.UnknownCryptocurrencySymbol(symbol);
         }
-        return sb.toString();
+        else if (userList.contains(symbol)) {
+            return Messenger.AlreadyInTheList(symbol);
+        }
+        else if (userList.size() >= maxWatchListAllowed) {
+            return Messenger.MaximumExceeded(maxWatchListAllowed);
+        }
+        else {
+            user.AddToWatchList(symbol);
+            return Messenger.SuccessfullyAdded(symbol);
+        }
     }
 
     private class SimpleParser {
+        public String ProcessCommand(String userName) {
+            user = userMap.get(userName);
+            if(user == null) {
+                user = new User();
+                userMap.put(userName, user);
+            }
+            if(parseInput.size() == 1) {
+                return ProcessSimpleCommand(parseInput.get(0));
+            }
+            else if(parseInput.size() == 2) {
+                return ProcessParamCommand(parseInput);
+            }
+            else if(parseInput.size() == 3) {
+                // currently, no other method than the alert command was implemented
+                // otherwise in case of extension, for instance,
+                // ProcessMultiParamCommand(parseInput) implementation is suggested
+                return SetAlert();
+            }
+            else {
+                return Messenger.ParseError();
+            }
+        }
+
         private String ProcessSimpleCommand(String input) {
             boolean wasFound = false;
             String returnMessage = null;
@@ -293,17 +356,18 @@ public class Processor {
                 if(command.GetName().equals(input)) {
                     returnMessage = func.get();
                     wasFound = true;
+                    break;
                 }
             }
             if(!wasFound) {
-                return ErrorMessage.ParseError();
+                return Messenger.ParseError();
             }
             return returnMessage;
         }
 
         private String ProcessParamCommand(ArrayList<String> input) {
             String returnMessage = null;
-            boolean found = false;
+            boolean wasFound = false;
             for (var entry : paramFuncMapper.entrySet()) {
                 Command command = enumMapper.get(entry.getKey());
                 var func = entry.getValue();
@@ -312,134 +376,105 @@ public class Processor {
                 var firstPart = command.GetName().split(" ")[0];
                 if(firstPart.equals(first)) {
                     returnMessage = func.apply(second);
-                    found = true;
+                    wasFound = true;
                     break;
                 }
             }
-            if(!found) {
-                return ErrorMessage.ParseError();
+            if(!wasFound) {
+                return Messenger.ParseError();
             }
             else {
                 return returnMessage;
-            }
-        }
-
-        public String ProcessInput() {
-            if(simplifiedInput.size() == 1) {
-                return ProcessSimpleCommand(simplifiedInput.get(0));
-            }
-            else if(simplifiedInput.size() == 2) {
-                return ProcessParamCommand(simplifiedInput);
-            }
-            else if(simplifiedInput.size() == 3) {
-                // currently no other method than the alertion was implemented
-                return AlertOption();
-            }
-            else {
-                return ErrorMessage.ParseError();
             }
         }
     }
 
     //!clear
     private String ClearAll() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("Full clear initiated:\n")
-            .append(ClearList())
-            .append("\n")
-            .append(ClearAlerts());
-        return sb.toString();
+        ClearList();
+        ClearAlerts();
+        return Messenger.AllCleared();
     }
 
     // !listclear
     private String ClearList() {
-        localWatchList.clear();
-        return ErrorMessage.WatchlistCleared();
+        var usersList = user.GetWatchlist();
+        user.ClearWatchlist();
+        return Messenger.WatchlistCleared();
     }
 
     //!alertsclear
     private String ClearAlerts() {
-        currentAlerts.clear();
-        return ErrorMessage.AlertsCleared();
+        user.ClearAlerts();
+        return Messenger.AlertsCleared();
     }
 
     private String GetCurrentList() {
-        if(localWatchList.isEmpty())  {
+        var usersList = user.GetWatchlist();
+        if(usersList.isEmpty())  {
             var command = enumMapper.get(Actions.ADD);
-            return ErrorMessage.EmptyList(command);
+            return Messenger.EmptyList(command);
         }
         StringBuilder sBuilder = new StringBuilder();
-        for (String pair : localWatchList) {
-            sBuilder.append(
-                    MessageFormat.format(
-                            "{0} {1} USD\n", pair, cryptoPairs.get(pair)
-                    )
-            );
+        for (String symbol : usersList) {
+            Pair<String, Double> pair = new Pair<>(symbol, cryptocurrencyPairs.get(symbol));
+            sBuilder.append(pair);
         }
         return sBuilder.toString();
     }
 
-    private String AlertOption() {
+    private String SetAlert() {
+        double minPercent = -100;
+        String percentSymbol = "%";
         var command = enumMapper.get(Actions.ALERT);
-        var firstPart = command.GetName().split(" ")[0];
-        var first = simplifiedInput.get(0);
+
+        String firstPart = command.GetName().split(" ")[0];
+        String first = parseInput.get(0);
         if(!firstPart.equals(first)) {
-            return ErrorMessage.ParseError();
+            return Messenger.ParseError();
         }
         StringBuilder sb = new StringBuilder();
-        String pair = Utilities.Normalize(simplifiedInput.get(1));
-        if (!cryptoPairs.containsKey(pair)) {
-            return ErrorMessage.UnknownCryptoPair(pair);
+        String pair = Utilities.Normalize(parseInput.get(1));
+        if (!cryptocurrencyPairs.containsKey(pair)) {
+            return Messenger.UnknownCryptocurrencySymbol(pair);
         }
-        String strValue = simplifiedInput.get(2);
+        String strValue = parseInput.get(2);
 
         boolean isPercent = false;
-        if (strValue.endsWith("%")) {
+        if (strValue.endsWith(percentSymbol)) {
             strValue = Utilities.TrimLastCharacter(strValue);
             isPercent = true;
         }
         double value = Double.parseDouble(strValue);
+        if((isPercent && value < minPercent) || (!isPercent && value < 0)) {
+            return Messenger.ValueError(value, isPercent);
+        }
+
         Alert alert = new Alert();
         alert.SetPair(pair)
                 .SetValue(value).SetIsPerc(isPercent)
-                .SetPriceAtTime(cryptoPairs.get(pair));
-        
-        Optional<Alert> duplicate = currentAlerts.stream()
-                .filter(member -> pair.equals(member.GetCryptocurrencyPair())
-                ).findAny();
+                .SetPriceAtTime(cryptocurrencyPairs.get(pair));
+
+        var usersAlerts = user.GetAlerts();
+        Optional<Alert> duplicate = usersAlerts.stream()
+                .filter(member -> pair.equals(member.GetCryptocurrencySymbol()))
+                .findAny();
+
         if (duplicate.isPresent()) {
             var d = duplicate.get();
             if(d.GetValue().first == value) {
-                sb.append(ErrorMessage.DuplicateAlertIssue(pair, value, isPercent));
+                sb.append(Messenger.DuplicateAlertIssue(pair, value, isPercent));
             }
             else {
-                currentAlerts.add(alert);
-                sb.append(ErrorMessage.AnotherAlertCreated(pair, value, isPercent));
+                user.AddToAlerts(alert);
+                sb.append(Messenger.AnotherAlertCreated(pair, value, isPercent));
             }
         }
         else {
-            currentAlerts.add(alert);
-            sb.append(ErrorMessage.SuccessfullyCreated(pair, value, isPercent));
+            user.AddToAlerts(alert);
+            sb.append(Messenger.SuccessfullyCreated(pair, value, isPercent));
         }
         return sb.toString();
-    }
-
-    public String ProcessInput(String[] args) {
-        simplifiedInput = new ArrayList<>(Arrays.asList(args));
-        for (String arg : args) {
-            Utilities.Print(arg);
-        }
-        String command = args[0];
-        String helpKeyword = enumMapper.get(Actions.HELP).GetName();
-        if(command.equals(helpKeyword)) {
-            return GetHelp();
-        }
-        else if (command.startsWith(triggerSign)) {
-            var simple = new SimpleParser();
-            return simple.ProcessInput();
-        } else {
-            return ""; // normal non-command chat
-        }
     }
 }
 

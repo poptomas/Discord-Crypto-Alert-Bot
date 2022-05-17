@@ -1,6 +1,9 @@
 package cz.cuni.mff.semestral.actions;
 import cz.cuni.mff.semestral.utilities.Pair;
 
+/**
+ * Data class for alert info
+ */
 public class Alert {
     private String pair;
     private Double value;
@@ -36,7 +39,7 @@ public class Alert {
         return pair;
     }
 
-    public String GetCryptocurrencyPair() {
+    public String GetCryptocurrencySymbol() {
         return pair;
     }
 

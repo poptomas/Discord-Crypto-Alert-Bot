@@ -15,13 +15,7 @@ public class Command {
     }
 
     public String GetLine() {
-        StringBuilder sb = new StringBuilder();
-        int offset = 20;
-        sb.append(name)
-            .append(" - ")
-            .append(description)
-            .append("\n");
-        return sb.toString();
+        return String.format("%s\n - %s\n", name, description);
     }
 
     private final String name;
