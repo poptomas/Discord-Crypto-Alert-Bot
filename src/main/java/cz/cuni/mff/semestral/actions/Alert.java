@@ -1,32 +1,36 @@
 package cz.cuni.mff.semestral.actions;
+
 import cz.cuni.mff.semestral.utilities.Pair;
 
+import java.text.MessageFormat;
+
 /**
- * Data class for alert info
+ * Data class containg necessary information
+ * about the alert i.e., symbol, value, initial value
  */
 public class Alert {
-    private String pair;
+    private String symbol;
     private Double value;
     private Double priceAtTime;
     private boolean isPercent = false;
 
-    public Alert SetPair(String pair) {
-        this.pair = pair;
+    public Alert SetPair(String inSymbol) {
+        symbol = inSymbol;
         return this;
     }
 
-    public Alert SetValue(double value) {
-        this.value = value;
+    public Alert SetValue(double inValue) {
+        value = inValue;
         return this;
     }
 
-    public Alert SetIsPerc(boolean isPercent) {
-        this.isPercent = isPercent;
+    public Alert SetIsPerc(boolean inIsPercent) {
+        isPercent = inIsPercent;
         return this;
     }
 
-    public Alert SetPriceAtTime(Double priceAtTime) {
-        this.priceAtTime = priceAtTime;
+    public Alert SetPriceAtTime(Double inPriceAtTime) {
+        priceAtTime = inPriceAtTime;
         return this;
     }
 
@@ -36,11 +40,11 @@ public class Alert {
 
     @Override
     public String toString() {
-        return pair;
+        return MessageFormat.format("{0}.{1}.{2}", symbol, value, isPercent);
     }
 
     public String GetCryptocurrencySymbol() {
-        return pair;
+        return symbol;
     }
 
     public double GetPriceAtTime() {

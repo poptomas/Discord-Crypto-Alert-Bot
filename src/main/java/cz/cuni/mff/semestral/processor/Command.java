@@ -1,5 +1,10 @@
 package cz.cuni.mff.semestral.processor;
 
+/**
+ * Data class containing the command name
+ * and its description, primarily used
+ * for the automation of help command
+ */
 public class Command {
     public Command(String inName, String inDescription) {
         name = inName;

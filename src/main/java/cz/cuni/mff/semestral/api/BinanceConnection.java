@@ -21,7 +21,12 @@ public class BinanceConnection {
     final int delay = 5000;
     final int okCode = 200;
 
-    public HashMap<String, Double> jsonParse(String responseBody) {
+    /**
+     * Parses json containing cryptocurrency symbols and their prices provided by the Binance API
+     * @param responseBody Response in the raw form
+     * @return parsed hashmap containing cryptocurrency symbols as keys and their prices as values
+     */
+    public HashMap<String, Double> ParseJson(String responseBody) {
         HashMap<String, Double> cryptocurrencyPairs = new HashMap<>();
         JsonArray jsonArr = JsonParser.parseString(responseBody).getAsJsonArray();
         for (JsonElement elem: jsonArr) {
@@ -44,7 +49,12 @@ public class BinanceConnection {
         return cryptocurrencyPairs;
     }
 
-    public String connect() throws IOException {
+    /**
+     * Establishes connection with the Binance API
+     * @return Response in the raw form
+     * @throws IOException in case, the input stream readers are not available
+     */
+    public String Connect() throws IOException {
         URL url = new URL(binance + dir);
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
         connection.setRequestMethod(method);

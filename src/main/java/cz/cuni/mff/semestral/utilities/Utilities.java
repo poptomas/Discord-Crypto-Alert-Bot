@@ -1,7 +1,6 @@
 package cz.cuni.mff.semestral.utilities;
 
 import java.text.DecimalFormat;
-import java.text.MessageFormat;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 

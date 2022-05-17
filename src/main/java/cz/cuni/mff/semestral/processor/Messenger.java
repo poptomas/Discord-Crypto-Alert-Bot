@@ -1,12 +1,19 @@
 package cz.cuni.mff.semestral.processor;
 
 import cz.cuni.mff.semestral.utilities.Utilities;
+
 import java.text.MessageFormat;
 
+/**
+ * Class to hide concrete implementation details
+ * mostly concerning output formatting
+ */
 public class Messenger {
     final static String symbolsURL = "https://coinmarketcap.com/exchanges/binance";
 
-
+    /**
+     * @return Generic message in case the user's input does not comply with the rules contained in help
+     */
     static String ParseError() {
         return MessageFormat.format(
                 "Parse error, take a look at {0}help\n",
@@ -14,10 +21,16 @@ public class Messenger {
         );
     }
 
+    /**
+     *
+     * @param value Numeric (absolute) or percent value of a cryptocurrency based on isPercent
+     * @param isPercent percentage
+     * @return Message of unsuccessful value parsing
+     */
     static String ValueError(double value, boolean isPercent) {
         if(isPercent) {
             return MessageFormat.format(
-                    "Value error ({0}%) - with percent, the minimum is -100%\n",
+                    "Value error ({0}%) - with percent, the minimum is -100% (and 0% would be triggered immediately)\n",
                     Utilities.NumFormat(value)
             );
         }
@@ -37,17 +50,17 @@ public class Messenger {
         return "Your watchlist was cleared";
     }
 
+    static String GetHelpHeader() {
+        return MessageFormat.format(
+                "For cryptocurrency pairs - {0} Currently supported commands:\n",
+                SuggestURL()
+        );
+    }
+
     static String AllCleared( ) {
         return MessageFormat.format(
                 "Full clear initiated:\n{0}\n{1}\n",
                 WatchlistCleared(), AlertsCleared()
-        );
-    }
-
-    static String UnknownCryptocurrencySymbol(String symbol) {
-        return MessageFormat.format(
-                "Unknown cryptocurrency symbol: {0}. {1}\n",
-                SuggestURL(), symbol
         );
     }
 
@@ -64,17 +77,70 @@ public class Messenger {
         return MessageFormat.format("Take a look at {0}", symbolsURL);
     }
 
-    static String SuccessfullyCreated(String symbol, double value, boolean isPercent) {
+    static String UnknownCryptocurrencySymbol(String symbol) {
+        return MessageFormat.format(
+                "Unknown cryptocurrency symbol: {0}. {1}\n",
+                symbol, SuggestURL()
+        );
+    }
+
+    static String UnknownAction(String input) {
+        return MessageFormat.format("Unknown action: {0}", input);
+    }
+
+    static String AlertSuccessfullyCreated(String symbol, double value, boolean isPercent) {
         String valuePart = Utilities.GetValueWithInfo(value, isPercent);
         return MessageFormat.format("Alert for {0} (value: {1}) was successfully created\n",
                 symbol, valuePart
         );
     }
 
+    static String AddedSuccessfullyToWatchList(String symbol) {
+        return MessageFormat.format("{0} was successfully added to your watchlist.\n", symbol);
+    }
+
+    static String SuccessfullyRemoved(String symbol, String storage) {
+        return MessageFormat.format("{0} was successfully removed from your {1}.\n", symbol, storage);
+    }
+
+    static String MaximumExceeded(int size) {
+        return MessageFormat.format("Maximum exceeded (max allowed: {0})\n", size);
+    }
+
+    static String NotFound(String symbol, String storage) {
+        return MessageFormat.format("{0} was not found in your {1}", symbol, storage);
+    }
+
+    static String AlreadyInTheWatchList(String symbol) {
+        return MessageFormat.format("{0} is already in your list\n", symbol);
+    }
+
+    static String WatchListIsEmpty() {
+        return "Your watchlist is empty";
+    }
+
+    static String EmptyList(Command command) {
+        return MessageFormat.format(
+                "{0}, consider adding some using the command: {1}\n",
+                WatchListIsEmpty(), command.GetName()
+        );
+    }
+
+    static String AlertsAreEmpty() {
+        return "Your alerts are empty";
+    }
+
+    static String EmptyAlerts(Command command) {
+        return MessageFormat.format(
+                "{0}, consider adding some using the command: {1} \n",
+                AlertsAreEmpty(), command.GetName()
+        );
+    }
+
     static String AnotherAlertCreated(String symbol, double value, boolean isPercent) {
         String valuePart = Utilities.GetValueWithInfo(value, isPercent);
         return MessageFormat.format(
-                "Another alert for {0} was created (value: {1})\n",
+                "Another alert for {0} (value: {1}) was created \n",
                 symbol, valuePart
         );
     }
@@ -84,40 +150,6 @@ public class Messenger {
         return MessageFormat.format(
                 "Alert {0} already exists with the exact value ({1})\n",
                 symbol, valuePart
-        );
-    }
-
-    static String SuccessfullyAdded(String symbol) {
-        return MessageFormat.format("{0} was successfully added to your watchlist.\n", symbol);
-    }
-
-    static String MaximumExceeded(int size) {
-        return MessageFormat.format("Maximum exceeded (max allowed: {0})\n", size);
-    }
-
-    static String SuccessfullyRemoved(String symbol, String storage) {
-        return MessageFormat.format("{0} was successfully removed from your {1}.\n", symbol, storage);
-    }
-
-    static String NotFound(String symbol) {
-        return MessageFormat.format("{0} was not found in your list.\n", symbol);
-    }
-
-    static String AlreadyInTheList(String symbol) {
-        return MessageFormat.format("{0} is already in your list\n", symbol);
-    }
-
-    static String EmptyList(Command command) {
-        return MessageFormat.format(
-                "Your watchlist is empty, add some using {0} command\n",
-                command.GetName()
-        );
-    }
-
-    static String EmptyAlerts(Command command) {
-        return MessageFormat.format(
-                "Your alerts are empty, add some using {0} command\n",
-                command.GetName()
         );
     }
 }

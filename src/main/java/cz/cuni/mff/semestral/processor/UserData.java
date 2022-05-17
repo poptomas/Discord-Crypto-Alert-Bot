@@ -2,18 +2,19 @@ package cz.cuni.mff.semestral.processor;
 
 import cz.cuni.mff.semestral.actions.Alert;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.SortedSet;
-import java.util.TreeSet;
+import java.util.*;
 
-public class User {
+/**
+ * Data class for containing storages (watchlist and alerts)
+ * of a particular user
+ */
+public class UserData {
     private final SortedSet<String> watchList;
-    private final ArrayList<Alert> alerts;
+    private final HashMap<String, Alert> alerts;
 
-    public User() {
+    public UserData() {
         watchList = new TreeSet<>();
-        alerts = new ArrayList<>();
+        alerts = new HashMap<>();
     }
 
     public void AddToWatchList(String symbol) {
@@ -25,15 +26,14 @@ public class User {
     }
 
     public void AddToAlerts(Alert alert) {
-        alerts.add(alert);
+        var uniqueKey = alert.toString();
+        alerts.put(uniqueKey, alert);
     }
 
-    public void RemoveFromAlerts(Alert alert) {
-        alerts.remove(alert);
-    }
-
-    public void RemoveMultipleAlerts(List<Alert> elementsToBeRemoved) {
-        alerts.removeAll(elementsToBeRemoved);
+    public void RemoveFromAlerts(List<Alert> elementsToBeRemoved) {
+        for (Alert alert: elementsToBeRemoved) {
+            alerts.remove(alert.toString());
+        }
     }
 
     public void ClearWatchlist() {
@@ -48,7 +48,7 @@ public class User {
         return watchList;
     }
 
-    public ArrayList<Alert> GetAlerts() {
+    public HashMap<String, Alert> GetAlerts() {
         return alerts;
     }
 }
