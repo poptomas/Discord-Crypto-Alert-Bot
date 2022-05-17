@@ -9,7 +9,6 @@ import java.util.ArrayList;
  * Utility class to abstract some
  * technical details of implementation
  */
-
 public class Utilities {
     final static NumberFormat numberFormat = new DecimalFormat("##.#######");
 
