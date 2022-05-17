@@ -38,11 +38,6 @@ public class Alert {
         return new Pair<>(value, isPercent);
     }
 
-    @Override
-    public String toString() {
-        return MessageFormat.format("{0}.{1}.{2}", symbol, value, isPercent);
-    }
-
     public String GetCryptocurrencySymbol() {
         return symbol;
     }
@@ -50,4 +45,10 @@ public class Alert {
     public double GetPriceAtTime() {
         return priceAtTime;
     }
+
+    @Override
+    public String toString() {
+        return MessageFormat.format("{0}.{1}.{2}", symbol, value, isPercent);
+    }
+
 }

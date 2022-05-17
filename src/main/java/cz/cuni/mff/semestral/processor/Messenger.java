@@ -57,10 +57,10 @@ public class Messenger {
         );
     }
 
-    static String AllCleared( ) {
+    static String AllCleared(String watchListInfo, String alertsInfo) {
         return MessageFormat.format(
                 "Full clear initiated:\n{0}\n{1}\n",
-                WatchlistCleared(), AlertsCleared()
+                watchListInfo, alertsInfo
         );
     }
 

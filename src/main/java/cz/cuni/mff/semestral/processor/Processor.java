@@ -422,7 +422,9 @@ public class Processor {
      * @return Message concerning the completion of the action
      */
     private String ClearAll() {
-        return Messenger.AllCleared();
+        String watchListReturnValue = ClearWatchList();
+        String alertsReturnValue = ClearAlerts();
+        return Messenger.AllCleared(watchListReturnValue, alertsReturnValue);
     }
 
     /**
