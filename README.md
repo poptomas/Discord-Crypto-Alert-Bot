@@ -21,8 +21,8 @@ and to try out an own Discord bot creation which could serve a small subset of C
     - For Windows/Linux users - available inside of IntelliJ Idea or by [manual installation](https://gradle.org/install/)
 
 - External dependencies
-    - Google Gson - JSON parsing library to process the Binance API response
-    - JDA - Java Discord API - Discord support for Java - token authentication, receive and send messages
+    - [Google Gson](https://github.com/google/gson) - JSON parsing library to process the Binance API response
+    - [JDA](https://github.com/DV8FromTheWorld/JDA) - Java Discord API - Discord support for Java - token authentication, receive and send messages
 
 ## Setup and Launch
 - IntelliJ Idea contains gradle support by default, therefore you are requested to build and run the project
