@@ -1,5 +1,11 @@
 plugins {
-    id 'java'
+    id 'application'
+}
+
+apply plugin: 'java'
+
+application {
+    mainClassName = 'cz.cuni.mff.semestral.Entrypoint'
 }
 
 group 'cz.cuni.mff.semestral'
@@ -19,3 +25,4 @@ dependencies {
 test {
     useJUnitPlatform()
 }
+
