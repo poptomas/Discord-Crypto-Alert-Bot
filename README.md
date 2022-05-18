@@ -8,9 +8,7 @@ Crypto Alert Bot is an application written in Java which serves as a cryptocurre
 The application operates with Binance API containing around 1000 cryptocurrency pairs (symbols and their prices) updated with a little to none delay compared to the prices binance.com provides to regular users. Since Binance on its own lists way more than 1000 cryptocurrency pairs, it is recommended to use rather conventional cryptocurrency pairs or to check the availability by taking a look at https://api.binance.com/api/v3/ticker/price and CTRL+F the desired cryptocurrency symbol with its price.
 
 ### Motivation
-The main motivation behind the application creation was to extend alert percentage use https://cryptocurrencyalerting.com/coin/BOT
-which otherwise serves as a swiss knife (messages on multiple platforms, multiple cryptocurrency exchanges etc.) in terms of cryptocurrency alerts
-and to try out an own Discord bot creation which could serve a small subset of Cryptocurrency Alerting website functionality. 
+The main motivation behind the application creation was to extend alert percentage which [Cryptocurrency Alerting](https://cryptocurrencyalerting.com/coin/BOT) does not provide (nevertheless, it serves as a swiss knife - messages on multiple platforms, multiple cryptocurrency exchanges, etc. in terms of cryptocurrency alerts) and to try out how to create an own Discord bot serving a small subset of [Cryptocurrency Alerting](https://cryptocurrencyalerting.com/coin/BOT) webapp functionality.
 
 ## Technology Used
 - Java
