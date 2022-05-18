@@ -192,7 +192,6 @@ public class Processor {
                 var name = alert.GetCryptocurrencySymbol();
                 var projected = alert.GetValue();
                 double triggerValue = projected.first;
-                // TODO move abstraction to Message class
                 sb.append(name);
                 if (projected.second) {
                     triggerValue = Utilities.CalcValueFromPercent(alert.GetPriceAtTime(), projected.first);
@@ -336,7 +335,6 @@ public class Processor {
         symbol = Utilities.Normalize(symbol);
         String storage = "alerts";
         StringBuilder sb = new StringBuilder();
-        Utilities.Print(usersAlerts.size());
         ArrayList<Alert> removalList = new ArrayList<>();
 
         for(var alertPair : usersAlerts.entrySet()) {
