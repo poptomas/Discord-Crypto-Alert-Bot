@@ -6,6 +6,12 @@ application {
     mainClassName = 'cz.cuni.mff.semestral.Entrypoint'
 }
 
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(16)
+    }
+}
+
 group 'cz.cuni.mff.semestral'
 version '1.0 (alpha)'
 
