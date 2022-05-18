@@ -12,7 +12,7 @@ The main motivation behind the application creation was to extend alert percenta
 
 ## Technology Used
 - Java
-    - Java 16 or 17 was tested for a compilation and  run
+    - Java 16 was tested for a compilation and a successful run
 
 - gradle
     - To build the library it is demanded to have at version 7+ (the version used was 7.1)
