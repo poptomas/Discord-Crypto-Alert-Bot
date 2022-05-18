@@ -67,7 +67,7 @@ public class Messenger {
     static String GetTriggerValue(String name, double projectedValue, double currentValue) {
         double changeInPercentNeeded = Utilities.CalcPercentFromValues(currentValue, projectedValue);
         return MessageFormat.format(
-            "{0} alert triggers at {1} USD ({2} % in change needed)\n - current price: {3} USD\n",
+            "{0} alert triggers at {1} USD ({2} % in change needed)\n - current value: {3} USD\n",
             name, Utilities.NumFormat(projectedValue),
             changeInPercentNeeded, Utilities.NumFormat(currentValue)
         );
@@ -88,10 +88,10 @@ public class Messenger {
         return MessageFormat.format("Unknown action: {0}", input);
     }
 
-    static String AlertSuccessfullyCreated(String symbol, double value, boolean isPercent) {
+    static String AlertSuccessfullyCreated(String symbol, double value, boolean isPercent, double currentValue) {
         String valuePart = Utilities.GetValueWithInfo(value, isPercent);
-        return MessageFormat.format("Alert for {0} (value: {1}) was successfully created\n",
-                symbol, valuePart
+        return MessageFormat.format("Alert for {0} (target value: {1}) was created - current value: {2}\n",
+                symbol, valuePart, currentValue
         );
     }
 
@@ -137,11 +137,11 @@ public class Messenger {
         );
     }
 
-    static String AnotherAlertCreated(String symbol, double value, boolean isPercent) {
+    static String AnotherAlertCreated(String symbol, double value, boolean isPercent, double currentValue) {
         String valuePart = Utilities.GetValueWithInfo(value, isPercent);
         return MessageFormat.format(
-                "Another alert for {0} (value: {1}) was created \n",
-                symbol, valuePart
+                "Another alert for {0} (target value: {1}) was created - current value: {2} \n",
+                symbol, valuePart, currentValue
         );
     }
 

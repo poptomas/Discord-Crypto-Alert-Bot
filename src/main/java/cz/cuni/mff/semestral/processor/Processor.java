@@ -507,12 +507,16 @@ public class Processor {
             }
             else {
                 userData.AddToAlerts(alert);
-                return Messenger.AnotherAlertCreated(pair, value, isPercent);
+                return Messenger.AnotherAlertCreated(
+                        pair, value, isPercent, alert.GetPriceAtTime()
+                );
             }
         }
         else {
             userData.AddToAlerts(alert);
-            return Messenger.AlertSuccessfullyCreated(pair, value, isPercent);
+            return Messenger.AlertSuccessfullyCreated(
+                    pair, value, isPercent, alert.GetPriceAtTime()
+            );
         }
     }
 
