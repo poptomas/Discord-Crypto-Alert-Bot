@@ -2,8 +2,6 @@ plugins {
     id 'application'
 }
 
-apply plugin: 'java'
-
 application {
     mainClassName = 'cz.cuni.mff.semestral.Entrypoint'
 }
