@@ -23,7 +23,7 @@ public class Processor {
         RMALERT, RMLIST,
         LIST, ALERTS,
         FULLCLEAR, LISTCLEAR, ALERTSCLEAR,
-        HELP, CALLWITH
+        HELP
     }
 
     /**
