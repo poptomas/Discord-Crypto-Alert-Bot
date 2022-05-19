@@ -74,7 +74,7 @@ public class Messenger {
     }
 
     static String SuggestURL() {
-        return MessageFormat.format("Take a look at {0}", symbolsURL);
+        return MessageFormat.format("Take a look at: {0}\n", symbolsURL);
     }
 
     static String UnknownCryptocurrencySymbol(String symbol) {
@@ -151,5 +151,13 @@ public class Messenger {
                 "Alert {0} already exists with the exact value ({1})\n",
                 symbol, valuePart
         );
+    }
+
+    static String SignChanged(String startSymbol) {
+        return MessageFormat.format("From now on, run the commands starting with {0}\n", startSymbol);
+    }
+
+    static String SignLengthIssue(String startSymbol) {
+        return MessageFormat.format("The start symbol \"{0}\" is way too long\n", startSymbol);
     }
 }

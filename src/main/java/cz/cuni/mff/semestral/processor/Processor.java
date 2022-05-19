@@ -23,7 +23,7 @@ public class Processor {
         RMALERT, RMLIST,
         LIST, ALERTS,
         FULLCLEAR, LISTCLEAR, ALERTSCLEAR,
-        HELP
+        HELP, CALLWITH
     }
 
     /**
@@ -43,6 +43,7 @@ public class Processor {
     private final EnumMap<Actions, Command> enumMapper;
     private final EnumMap<Actions, Supplier<String>> simpleFuncMapper;
     private final EnumMap<Actions, Function<String, String>> paramFuncMapper;
+    private final EnumMap<Actions, Function<List<String>, String>> multiParamFuncMapper;
 
     // runs particular methods based on the delegate
     private final Runner runner;
@@ -52,6 +53,7 @@ public class Processor {
         enumMapper = new EnumMap<>(Actions.class);
         simpleFuncMapper = new EnumMap<>(Actions.class);
         paramFuncMapper = new EnumMap<>(Actions.class);
+        multiParamFuncMapper = new EnumMap<>(Actions.class);
         runner = new Runner();
         userMap = new HashMap<>();
         FillEnumMaps();
@@ -67,7 +69,7 @@ public class Processor {
         enumMapper.put(
                 Actions.ADD,
                 new Command(
-                        MessageFormat.format("{0}add [symbol]", triggerSign),
+                        MessageFormat.format("{0}add <symbol>", triggerSign),
                         "adds a new cryptocurrency to your watchlist"
                 )
         );
@@ -75,22 +77,22 @@ public class Processor {
         enumMapper.put(
                 Actions.ALERT,
                 new Command(
-                        MessageFormat.format("{0}alert [symbol] [value]", triggerSign),
-                        "creates a new alert, i. e., !alert BTCUSDT -5% or !alert BTCUST 31000"
+                        MessageFormat.format("{0}alert <symbol> <value>", triggerSign),
+                        "creates a new alert, i. e., !alert BTCUSDT -5% or !alert BTCUSDT 31000"
                 )
         );
 
         enumMapper.put(
                 Actions.RMLIST,
                 new Command(
-                        MessageFormat.format("{0}rml [symbol]", triggerSign),
+                        MessageFormat.format("{0}rml <symbol>", triggerSign),
                         "removes the symbol from your current watchlist"
                 )
         );
 
         enumMapper.put(
                 Actions.RMALERT,
-                new Command(MessageFormat.format("{0}rma [symbol]", triggerSign),
+                new Command(MessageFormat.format("{0}rma <symbol>", triggerSign),
                         "removes the symbol your current alerts"
                 )
         );
@@ -146,6 +148,8 @@ public class Processor {
         paramFuncMapper.put(Actions.ADD, this::AddToWatchlist);
         paramFuncMapper.put(Actions.RMLIST, this::RemoveFromWatchlist);
         paramFuncMapper.put(Actions.RMALERT, this::RemoveFromAlerts);
+
+        multiParamFuncMapper.put(Actions.ALERT, this::AddToAlerts);
     }
 
     /**
@@ -292,6 +296,25 @@ public class Processor {
 
     /**
      *
+     * @return Returns a formatted message containing the user's watchlist
+     *      * - if the user's watchlist is empty, the message (with a command how to add a symbol to the watchlist) is returned
+     */
+    private String GetWatchList() {
+        var usersList = userData.GetWatchlist();
+        if(usersList.isEmpty())  {
+            var command = enumMapper.get(Actions.ADD);
+            return Messenger.EmptyList(command);
+        }
+        StringBuilder sBuilder = new StringBuilder();
+        for (String symbol : usersList) {
+            Pair<String, Double> pair = new Pair<>(symbol, cryptocurrencyPairs.get(symbol));
+            sBuilder.append(pair);
+        }
+        return sBuilder.toString();
+    }
+
+    /**
+     *
      * @return Returns a formatted message containing alerts of a particular user
      * - if the user's alert storage is empty, the message (with a command how to add an alert) is returned
      */
@@ -324,37 +347,6 @@ public class Processor {
     }
 
     /**
-     * Removes alert(s) from the user's alerts storage based on the entered symbol
-     * @param symbol Cryptocurrency symbol
-     * @return Message
-     * - in case of success the enumeration of successful removals
-     * - otherwise, the information that the cryptocurrency symbol was not found
-     */
-    private String RemoveFromAlerts(String symbol) {
-        var usersAlerts = userData.GetAlerts();
-        symbol = Utilities.Normalize(symbol);
-        String storage = "alerts";
-        StringBuilder sb = new StringBuilder();
-        ArrayList<Alert> removalList = new ArrayList<>();
-
-        for(var alertPair : usersAlerts.entrySet()) {
-            var uniqueKey = alertPair.getKey();
-            var alert = alertPair.getValue();
-            if(uniqueKey.startsWith(symbol)) {
-                removalList.add(alert);
-                sb.append(Messenger.SuccessfullyRemoved(symbol, storage));
-            }
-        }
-        if(removalList.isEmpty()) {
-            sb.append(Messenger.NotFound(symbol, storage));
-        }
-        else {
-            userData.RemoveFromAlerts(removalList);
-        }
-        return sb.toString();
-    }
-
-    /**
      * Tries to add the symbol to the watchlist,
      * returning message varies upon success and failed operations
      * such as that the symbol is already in the list, unknown symbol,
@@ -382,100 +374,20 @@ public class Processor {
     }
 
     /**
-     * Removes a symbol from the user's watchlist
-     * @param symbol Cryptocurrency symbol
-     * @return Message
-     * - in case of success, the information of successful removal
-     * - otherwise, the information that the cryptocurrency symbol was not found
-     */
-    private String RemoveFromWatchlist(String symbol) {
-        var usersWatchlist = userData.GetWatchlist();
-        symbol = Utilities.Normalize(symbol);
-        String storage = "watchlist";
-        if(usersWatchlist.contains(symbol)) {
-            userData.RemoveFromWatchlist(symbol);
-            return Messenger.SuccessfullyRemoved(symbol, storage);
-        }
-        else {
-            return Messenger.NotFound(symbol, storage);
-        }
-    }
-
-    private String GetWatchList() {
-        var usersList = userData.GetWatchlist();
-        if(usersList.isEmpty())  {
-            var command = enumMapper.get(Actions.ADD);
-            return Messenger.EmptyList(command);
-        }
-        StringBuilder sBuilder = new StringBuilder();
-        for (String symbol : usersList) {
-            Pair<String, Double> pair = new Pair<>(symbol, cryptocurrencyPairs.get(symbol));
-            sBuilder.append(pair);
-        }
-        return sBuilder.toString();
-    }
-
-    /**
-     * Clears both alert and watchlist storages
-     * @return Message concerning the completion of the action
-     */
-    private String ClearAll() {
-        String watchListReturnValue = ClearWatchList();
-        String alertsReturnValue = ClearAlerts();
-        return Messenger.AllCleared(watchListReturnValue, alertsReturnValue);
-    }
-
-    /**
-     * @return Message of a successful completion/info that
-     * the alert storage is already empty
-     */
-    private String ClearWatchList() {
-        var usersList = userData.GetWatchlist();
-        if(usersList.isEmpty()) {
-            return Messenger.WatchListIsEmpty();
-        }
-        else {
-            userData.ClearWatchlist();
-            return Messenger.WatchlistCleared();
-        }
-    }
-
-    /**
-     * @return Message of a successful completion/info that
-     * the alert storage is already empty
-     */
-    private String ClearAlerts() {
-        var usersList = userData.GetAlerts();
-        if(usersList.isEmpty()) {
-            return Messenger.AlertsAreEmpty();
-        }
-        else {
-            userData.ClearAlerts();
-            return Messenger.AlertsCleared();
-        }
-    }
-
-    /**
      * Adds a new alert to the user's storage,
      * checks whether the entered input is compliant with the help provided
+     * @param arguments user input besides of the initial command with the start symbol
      * @return Message concerning successful completion or
      * failure, i. e., non-compliant input values, duplicate finding notice
      */
-    private String AddToAlerts() {
+    private String AddToAlerts(List<String> arguments) {
         double minPercent = -100;
         String percentSymbol = "%";
-        var command = enumMapper.get(Actions.ALERT);
-
-        String firstPart = command.GetName().split(" ")[0];
-        String first = parseInput.get(0);
-        if(!firstPart.equals(first)) {
-            return Messenger.ParseError();
-        }
-        String pair = Utilities.Normalize(parseInput.get(1));
+        String pair = Utilities.Normalize(arguments.get(0));
         if (!cryptocurrencyPairs.containsKey(pair)) {
             return Messenger.UnknownCryptocurrencySymbol(pair);
         }
-        String strValue = parseInput.get(2);
+        String strValue = arguments.get(1);
 
         boolean isPercent = false;
         if (strValue.endsWith(percentSymbol)) {
@@ -521,6 +433,97 @@ public class Processor {
     }
 
     /**
+     * Removes alert(s) from the user's alerts storage based on the entered symbol
+     * @param symbol Cryptocurrency symbol
+     * @return Message
+     * - in case of success the enumeration of successful removals
+     * - otherwise, the information that the cryptocurrency symbol was not found
+     */
+    private String RemoveFromAlerts(String symbol) {
+        var usersAlerts = userData.GetAlerts();
+        symbol = Utilities.Normalize(symbol);
+        String storage = "alerts";
+        StringBuilder sb = new StringBuilder();
+        ArrayList<Alert> removalList = new ArrayList<>();
+
+        for(var alertPair : usersAlerts.entrySet()) {
+            var uniqueKey = alertPair.getKey();
+            var alert = alertPair.getValue();
+            if(uniqueKey.startsWith(symbol)) {
+                removalList.add(alert);
+                sb.append(Messenger.SuccessfullyRemoved(symbol, storage));
+            }
+        }
+        if(removalList.isEmpty()) {
+            sb.append(Messenger.NotFound(symbol, storage));
+        }
+        else {
+            userData.RemoveFromAlerts(removalList);
+        }
+        return sb.toString();
+    }
+
+    /**
+     * Removes a symbol from the user's watchlist
+     * @param symbol Cryptocurrency symbol
+     * @return Message
+     * - in case of success, the information of successful removal
+     * - otherwise, the information that the cryptocurrency symbol was not found
+     */
+    private String RemoveFromWatchlist(String symbol) {
+        var usersWatchlist = userData.GetWatchlist();
+        symbol = Utilities.Normalize(symbol);
+        String storage = "watchlist";
+        if(usersWatchlist.contains(symbol)) {
+            userData.RemoveFromWatchlist(symbol);
+            return Messenger.SuccessfullyRemoved(symbol, storage);
+        }
+        else {
+            return Messenger.NotFound(symbol, storage);
+        }
+    }
+
+    /**
+     * Clears both alert and watchlist storages
+     * @return Message concerning the completion of the action
+     */
+    private String ClearAll() {
+        String watchListReturnValue = ClearWatchList();
+        String alertsReturnValue = ClearAlerts();
+        return Messenger.AllCleared(watchListReturnValue, alertsReturnValue);
+    }
+
+    /**
+     * @return Message of a successful completion/info that
+     * the alert storage is already empty
+     */
+    private String ClearWatchList() {
+        var usersList = userData.GetWatchlist();
+        if(usersList.isEmpty()) {
+            return Messenger.WatchListIsEmpty();
+        }
+        else {
+            userData.ClearWatchlist();
+            return Messenger.WatchlistCleared();
+        }
+    }
+
+    /**
+     * @return Message of a successful completion/info that
+     * the alert storage is already empty
+     */
+    private String ClearAlerts() {
+        var usersList = userData.GetAlerts();
+        if(usersList.isEmpty()) {
+            return Messenger.AlertsAreEmpty();
+        }
+        else {
+            userData.ClearAlerts();
+            return Messenger.AlertsCleared();
+        }
+    }
+
+    /**
      * Runner class which delegates commands based
      * on the size of the input
      */
@@ -555,10 +558,7 @@ public class Processor {
                 return ProcessParamCommand(parseInput);
             }
             else if(parseInput.size() == 3) {
-                // currently, no other method than the alert command was implemented
-                // otherwise in case of extension, for instance,
-                // ProcessMultiParamCommand(parseInput) implementation is suggested
-                return AddToAlerts();
+                return ProcessMultiParamCommand(parseInput);
             }
             else {
                 return Messenger.ParseError();
@@ -605,6 +605,34 @@ public class Processor {
                 var firstPart = command.GetName().split(" ")[0];
                 if(firstPart.equals(first)) {
                     returnMessage = func.apply(second);
+                    wasFound = true;
+                    break;
+                }
+            }
+            if(!wasFound) {
+                return Messenger.UnknownAction(String.join(" ", input));
+            }
+            else {
+                return returnMessage;
+            }
+        }
+
+        /**
+         * Processes a more than two-argument command (i. e. !alert BTCUSDT +5%)
+         * @param input User input
+         * @return Return value of a particular function call
+         * - in case no function was found, an error message is returned
+         */
+        private String ProcessMultiParamCommand(ArrayList<String> input) {
+            String returnMessage = null;
+            boolean wasFound = false;
+            for (var entry : multiParamFuncMapper.entrySet()) {
+                Command command = enumMapper.get(entry.getKey());
+                var func = entry.getValue();
+                var first = input.get(0);
+                var firstPart = command.GetName().split(" ")[0];
+                if(firstPart.equals(first)) {
+                    returnMessage = func.apply(input.subList(1, input.size()));
                     wasFound = true;
                     break;
                 }
