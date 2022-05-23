@@ -16,7 +16,7 @@ import cz.cuni.mff.semestral.api.Communication;
  */
 public class Entrypoint {
     public static void main(String[] args) throws LoginException {
-        String token = "OTIzODgxNzIyOTY0MjEzNzcw.YcWd5w.KKrEEDHgexIrUXhNUvXSo_w32Nw";
+        String token = "OTIzODgxNzIyOTY0MjEzNzcw.YcWd5w.KKrEEDHgexIrUXhNUvXSo_w32Nw"; // no longer works
         JDA jda = JDABuilder.createDefault(token).build();
         jda.getPresence().setActivity(Activity.playing("Waiting forever"));
         Communication comm = new Communication();
