@@ -9,7 +9,7 @@ import cz.cuni.mff.semestral.api.Communication;
 
 /**
  * Entrypoint of the project
- * Contains the bot token (change is not recommended) which is required to pass the OAuth2 provided by the Discord API
+ * Contains the bot token which is required to pass the OAuth2 provided by the Discord API
  * - registers classes which the JDA component is supposed
  * to listen for events
  * - sets activities concerning the state of the bot just for fun
