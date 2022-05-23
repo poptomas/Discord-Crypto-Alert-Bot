@@ -144,7 +144,7 @@ public class Communication extends ListenerAdapter {
             }
             String output = processor.ProcessInput(inputArgs, index, userName);
             if (!output.isEmpty()) {
-                Utilities.Print(output);
+                //Utilities.Print(output);
                 String title = processor.GetPartialUserInput();
                 builder.setColor(random.nextInt());
                 builder.setTitle(title);
